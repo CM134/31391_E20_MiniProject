@@ -20,38 +20,101 @@ from numpy import zeros, array, linspace
 from math import ceil
 from gazebo_msgs.srv import GetModelState
 
+def Vizualize_Plan(plan1):
+  print " Waiting while RVIZ displays plan1..."
+  rospy.sleep(0.5)
+ 
+ 
+  ## You can ask RVIZ to visualize a plan (aka trajectory) for you.
+  print "   Visualizing plan1"
+  display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+  display_trajectory.trajectory_start = robot.get_current_state()
+  display_trajectory.trajectory.append(plan1)
+  display_trajectory_publisher.publish(display_trajectory);
+  print "   Waiting while plan1 is visualized (again)..."
+  rospy.sleep(1)
+ 
+  #If we're coming from another script we might want to remove the objects
+  if "table" in scene.get_known_object_names():
+    scene.remove_world_object("table")
+  if "table2" in scene.get_known_object_names():
+    scene.remove_world_object("table2")
+  if "groundplane" in scene.get_known_object_names():
+    scene.remove_world_object("groundplane")
 
-def init_pose():
-  print "============ Go Init Pose"
+def init_pose_joint():
+  print "============ Go Init Pose in Joint"
+
+  print('  Defining position')
+
+  pose_goal = group.get_current_pose().pose
+  pose_goal.orientation = geometry_msgs.msg.Quaternion(*tf_conversions.transformations.quaternion_from_euler(0., -math.pi/2, 0.))
+  pose_goal.position.x =0.40
+  pose_goal.position.y =-0.10
+  pose_goal.position.z =1.35
+  group.set_pose_target(pose_goal)
+
+
+  print('  Computing Path')
+  ## Now, we call the planner to compute the plan
+  plan1 = group.plan()
+  #Vizualize Plan
+  Vizualize_Plan(plan1)
+
+  ## Moving to a pose goal
+  print('  Executing Path')
+  group.go(wait=True)
+
+def init_pose_cartesian():
+  robot.get_current_state()
+  #set tolerance up in to avoid error
+  group.set_goal_orientation_tolerance(0.2)
+  group.set_goal_tolerance(0.2)
+  group.set_goal_joint_tolerance(0.2)
+  print "============ Go Init Pose in Cartesian"
+
+  print('  Defining position')
+  initial_pose = group.get_current_joint_values()
   initial_pose = group.get_current_pose().pose
-  waypoints = []
+  waypoints_init = []
 
-  waypoints.append(initial_pose)
+  waypoints_init.append(initial_pose)
 
   initial_pose.orientation = geometry_msgs.msg.Quaternion(*tf_conversions.transformations.quaternion_from_euler(0.0,  -math.pi/2  , 0.0))
   
   initial_pose.position.x =0.40
   initial_pose.position.y =-0.10
-  initial_pose.position.z =1.35
+  initial_pose.position.z =1.0
 
   #Create waypoints
-  waypoints.append(initial_pose)
- 
+  waypoints_init.append(copy.deepcopy(initial_pose))
+  print('  Computing Path')
+
   #createcartesian  plan
   (plan1, fraction) = group.compute_cartesian_path(
-                                      waypoints,   # waypoints to follow
+                                      waypoints_init,   # waypoints to follow
                                       0.01,        # eef_step
                                       0.0)         # jump_threshold
-  #plan1 = group.retime_trajectory(robot.get_current_state(), plan1, 1.0)
+  plan1 = group.retime_trajectory(robot.get_current_state(), plan1, 1.0)
+  rospy.sleep(2.0)
 
-  rospy.sleep(2)
+  Vizualize_Plan(plan1)
 
+  rospy.sleep(4.0)
+  print('  Executing Path')
   ## Moving to a pose goal
   group.execute(plan1,wait=True)
-  rospy.sleep(4.)
+  rospy.sleep(2.0)
+  
+  #set tolerance back down
+  group.set_goal_orientation_tolerance(0.02)
+  group.set_goal_tolerance(0.02)
+  group.set_goal_joint_tolerance(0.01)
 
 def go_down():
   print "============ Go Down"
+  print('  Defining position')
+
   downwards_pose = group.get_current_pose().pose
   waypoints = []
 
@@ -61,56 +124,121 @@ def go_down():
   
   #initial_pose.position.x =0.40
   #initial_pose.position.y =-0.10
-  downwards_pose.position.z = 0.8
+  downwards_pose.position.z = 0.77
 
   #Create waypoints
-  waypoints.append(downwards_pose)
- 
+  waypoints.append(copy.deepcopy(downwards_pose))
+  print('  Computing Path')
   #createcartesian  plan
   (plan1, fraction) = group.compute_cartesian_path(
                                       waypoints,   # waypoints to follow
                                       0.01,        # eef_step
                                       0.0)         # jump_threshold
   #plan1 = group.retime_trajectory(robot.get_current_state(), plan1, 1.0)
+  Vizualize_Plan(plan1)
 
-  rospy.sleep(2)
 
+  rospy.sleep(1)
+  print('  Executing Path')
   ## Moving to a pose goal
   group.execute(plan1,wait=True)
-  rospy.sleep(2.)
+  rospy.sleep(1)
+
+def go_up_joint():
+  print "============ Go Up Joint"
+
+  # print('  Defining position')
+
+  pose_goal = group.get_current_pose().pose
+  #pose_goal.orientation = geometry_msgs.msg.Quaternion(*tf_conversions.transformations.quaternion_from_euler(0., -math.pi/2, 0.))
+  #pose_goal.position.x =0.40
+  #pose_goal.position.y =-0.10
+  pose_goal.position.z = 1.0
+  group.set_pose_target(pose_goal)
+
+
+  #print('  Computing Path')
+  ## Now, we call the planner to compute the plan
+  plan1 = group.plan()
+  #Vizualize Plan
+  Vizualize_Plan(plan1)
+
+  ## Moving to a pose goal
+  print('  Executing Path')
+  group.go(wait=True)
+  rospy.sleep(1)
 
 def go_up():
-  print "============ Go Up"
+  #set tolerance up in to avoid error
+  group.set_goal_tolerance(0.2)
+  group.set_goal_orientation_tolerance(0.2)
+  group.set_goal_joint_tolerance(0.2)
+
+  print "============ Go Up Cartesian"
+  print('  Defining position')
   upwards_pose = group.get_current_pose().pose
-  waypoints = []
+  waypoints_up = []
 
-  waypoints.append(upwards_pose)
+  waypoints_up.append(upwards_pose)
 
-  upwards_pose.orientation = geometry_msgs.msg.Quaternion(*tf_conversions.transformations.quaternion_from_euler(0.0,  -math.pi/2  , 0.0))
+  #upwards_pose.orientation = geometry_msgs.msg.Quaternion(*tf_conversions.transformations.quaternion_from_euler(0.0,  -math.pi/2  , 0.0))
   
   #initial_pose.position.x =0.40
   #initial_pose.position.y =-0.10
-  upwards_pose.position.z = 1.45
+  upwards_pose.position.z = 1.3
 
   #Create waypoints
-  waypoints.append(upwards_pose)
- 
+  waypoints_up.append(copy.deepcopy(upwards_pose))
+
+  print('  Computing Path')
   #createcartesian  plan
   (plan1, fraction) = group.compute_cartesian_path(
-                                      waypoints,   # waypoints to follow
-                                      0.01,        # eef_step
-                                      0.0)         # jump_threshold
+                                      waypoints_up,   # waypoints to follow
+                                      0.02,        # eef_step
+                                      0.01)         # jump_threshold
   #plan1 = group.retime_trajectory(robot.get_current_state(), plan1, 1.0)
 
-  rospy.sleep(2)
+  rospy.sleep(1)
 
+  Vizualize_Plan(plan1)
+
+  print('  Executing Path')
   ## Moving to a pose goal
   group.execute(plan1,wait=True)
-  rospy.sleep(2.)
+  rospy.sleep(1)
+
+  #set tolerance back down
+  group.set_goal_tolerance(0.02)
+  group.set_goal_orientation_tolerance(0.02)
+  group.set_goal_joint_tolerance(0.01)
+
+def bucket_pose_joint():
+
+  print "============ Go Bucket Pose in Joint"
+
+  print('  Defining position')
+
+  bucket_pose = group.get_current_pose().pose
+  bucket_pose.orientation = geometry_msgs.msg.Quaternion(*tf_conversions.transformations.quaternion_from_euler(0.0,  -math.pi/2  , 0.0))
+  bucket_pose.position.x =0.53
+  bucket_pose.position.y =-0.23
+  bucket_pose.position.z =1.2
+  group.set_pose_target(bucket_pose)
+
+
+  print('  Computing Path')
+  ## Now, we call the planner to compute the plan
+  plan1 = group.plan()
+  #Vizualize Plan
+  Vizualize_Plan(plan1)
+
+  ## Moving to a pose goal
+  print('  Executing Path')
+  group.go(wait=True)
 
 def bucket_pose():
   print "============ Go to Bucket"
-  # x=0.53, y=-0.23
+  print('  Defining position')
   bucket_pose = group.get_current_pose().pose
   waypoints = []
 
@@ -121,10 +249,9 @@ def bucket_pose():
   bucket_pose.position.y =-0.23
   bucket_pose.position.z =1.2
 
-
-
+  print('  Computing Path')
   #Create waypoints
-  waypoints.append(bucket_pose)
+  waypoints.append(copy.deepcopy(bucket_pose))
  
   #createcartesian  plan
   (plan1, fraction) = group.compute_cartesian_path(
@@ -133,11 +260,49 @@ def bucket_pose():
                                       0.0)         # jump_threshold
   #plan1 = group.retime_trajectory(robot.get_current_state(), plan1, 1.0)
 
-  rospy.sleep(2)
+  rospy.sleep(1)
+  Vizualize_Plan(plan1)
 
+  print('  Executing Path')
   ## Moving to a pose goal
   group.execute(plan1,wait=True)
-  rospy.sleep(4.)
+  rospy.sleep(1)
+
+def import_bucket_to_RVIZ():
+  #x=0.53, y=-0.23,    z=0.78
+  p = geometry_msgs.msg.PoseStamped()
+  p.header.frame_id = robot.get_planning_frame()
+  p.pose.position.x = 0.53
+  p.pose.position.y = -0.23
+  p.pose.position.z = 0.75+0.2/2
+  p.pose.orientation = geometry_msgs.msg.Quaternion(*tf_conversions.transformations.quaternion_from_euler(0., 0.0, 0.785398))
+  #p.pose.orientation.y = -0.014
+  #p.pose.orientation.z = 0.05
+  scene.add_box('bucket', p, (0.2, 0.2, 0.2))
+
+def update_cube_to_RVIZ(cube_location,name):
+  p = geometry_msgs.msg.PoseStamped()
+  p.header.frame_id = robot.get_planning_frame()
+  p.pose.position.x = cube_location[0]
+  p.pose.position.y = cube_location[1]
+  p.pose.position.z = cube_location[2]
+  scene.add_box(name, p, (0.05, 0.05, 0.05))
+
+def import_all_cubes_to_RVIZ():
+  for i in range(0,6):  
+    cube_location = []
+    model_coordinates = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
+    blockName = 'cube{}'.format(i)
+    resp_coordinates = model_coordinates(blockName,'link')
+    
+    if resp_coordinates.success == True:
+      
+      cube_location.append(resp_coordinates.pose.position.x)
+      cube_location.append(resp_coordinates.pose.position.y)
+      cube_location.append(resp_coordinates.pose.position.z)
+
+      update_cube_to_RVIZ(cube_location,blockName)
+
 
 def get_cube_location(i):
   try:
@@ -145,18 +310,18 @@ def get_cube_location(i):
       model_coordinates = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
       blockName = 'cube{}'.format(i)
       resp_coordinates = model_coordinates(blockName,'link')
-      print '\n'
-      print 'Status.success = ', resp_coordinates.success
-      if resp_coordinates.success == True:
-        print(blockName)
-        print("Cube " + str(blockName))
+      
+      if resp_coordinates.success == True:        
         cube_location.append(resp_coordinates.pose.position.x)
         cube_location.append(resp_coordinates.pose.position.y)
         cube_location.append(resp_coordinates.pose.position.z)
+        print(blockName)
+        print("Cube " + str(blockName))
         print("Value of X : " + str(resp_coordinates.pose.position.x))
         print("Value of Y : " + str(resp_coordinates.pose.position.y)) 
         print("Value of Z : " + str(resp_coordinates.pose.position.z))
 
+        update_cube_to_RVIZ(cube_location,blockName)
       else:
         print('No more cubes')
   except rospy.ServiceException as e:
@@ -165,7 +330,45 @@ def get_cube_location(i):
 
 
 def cube_pose(cube_location,i):
+  if not cube_location:
+    print('There is no cube')
+  else:
+    print('=========Go to Cube{}'.format(i))
+    print('  Defining position')
+    print(cube_location)
+    cube_pose = group.get_current_pose().pose
+    waypoints = []
+
+    waypoints.append(cube_pose)
+
+    cube_pose.orientation = geometry_msgs.msg.Quaternion(*tf_conversions.transformations.quaternion_from_euler(0.0,  -math.pi/2  , 0.0))
+    cube_pose.position.x =cube_location[0]
+    cube_pose.position.y =cube_location[1]
+    cube_pose.position.z = cube_location[2]+0.3
+
+
+
+    #Create waypoints
+    waypoints.append(cube_pose)
+    print('  Computing Path')
+    #createcartesian  plan
+    (plan1, fraction) = group.compute_cartesian_path(
+                                        waypoints,   # waypoints to follow
+                                        0.01,        # eef_step
+                                        0.0)         # jump_threshold
+    #plan1 = group.retime_trajectory(robot.get_current_state(), plan1, 1.0)
+
+    rospy.sleep(1)
+    Vizualize_Plan(plan1)
+
+    print('  Executing Path')
+    ## Moving to a pose goal
+    group.execute(plan1,wait=True)
+    rospy.sleep(2.)
+
+def cube_pose_exact(cube_location,i):
   print('=========Go to Cube{}'.format(i))
+  print('  Defining position')
   print(cube_location)
   cube_pose = group.get_current_pose().pose
   waypoints = []
@@ -175,13 +378,13 @@ def cube_pose(cube_location,i):
   cube_pose.orientation = geometry_msgs.msg.Quaternion(*tf_conversions.transformations.quaternion_from_euler(0.0,  -math.pi/2  , 0.0))
   cube_pose.position.x =cube_location[0]
   cube_pose.position.y =cube_location[1]
-  #cube_pose.position.z =cube_location[2]
+  cube_pose.position.z = cube_location[2]
 
 
 
   #Create waypoints
   waypoints.append(cube_pose)
- 
+  print('  Computing Path')
   #createcartesian  plan
   (plan1, fraction) = group.compute_cartesian_path(
                                       waypoints,   # waypoints to follow
@@ -189,11 +392,13 @@ def cube_pose(cube_location,i):
                                       0.0)         # jump_threshold
   #plan1 = group.retime_trajectory(robot.get_current_state(), plan1, 1.0)
 
-  rospy.sleep(2)
+  rospy.sleep(1)
+  Vizualize_Plan(plan1)
 
+  print('  Executing Path')
   ## Moving to a pose goal
   group.execute(plan1,wait=True)
-  rospy.sleep(4.)
+  rospy.sleep(2.)
  
 
 def end_programm():
@@ -219,7 +424,7 @@ def close_gripper():
   #rospy.init_node('test_publish')
  
   # Setup subscriber
-  #rospy.Subscriber("/joint_states", JointState, jointStatesCallback)
+  rospy.Subscriber("/joint_states", JointState, jointStatesCallback)
  
   pub = rospy.Publisher("/jaco/joint_control", JointState, queue_size=1)
  
@@ -233,7 +438,7 @@ def close_gripper():
   for i in range(3):
     pub.publish(currentJointState)
     print 'Published!'
-    rospy.sleep(2.)
+    rospy.sleep(0.5)
  
   print 'end!'
 
@@ -245,7 +450,7 @@ def open_gripper():
   #rospy.init_node('test_publish')
  
   # Setup subscriber
-  #rospy.Subscriber("/joint_states", JointState, jointStatesCallback)
+  rospy.Subscriber("/joint_states", JointState, jointStatesCallback)
  
   pub = rospy.Publisher("/jaco/joint_control", JointState, queue_size=1)
  
@@ -259,137 +464,11 @@ def open_gripper():
   for i in range(3):
     pub.publish(currentJointState)
     print 'Published!'
-    rospy.sleep(2.)
+    rospy.sleep(0.5)
  
   print 'end!'
 
  
-def move_group_python_interface_tutorial():
-  ## BEGIN_TUTORIAL
-  ## First initialize moveit_commander and rospy.
-  print "============ Starting tutorial setup"
-  moveit_commander.roscpp_initialize(sys.argv)
-  rospy.init_node('move_group_python_interface_tutorial',
-                  anonymous=True)
- 
-  robot = moveit_commander.RobotCommander()
-  scene = moveit_commander.PlanningSceneInterface()
-  group = moveit_commander.MoveGroupCommander("Arm")
- 
-  ## trajectories for RVIZ to visualize.
-  display_trajectory_publisher = rospy.Publisher(
-                                      '/move_group/display_planned_path',
-                                      moveit_msgs.msg.DisplayTrajectory)
- 
-  print "============ Starting tutorial "
-  ## We can get the name of the reference frame for this robot
-  print "============ Reference frame: %s" % group.get_planning_frame()
-  ## We can also print the name of the end-effector link for this group
-  print "============ End effector frame: %s" % group.get_end_effector_link()
-  ## We can get a list of all the groups in the robot
-  print "============ Robot Groups:"
-  print robot.get_group_names()
-  ## Sometimes for debugging it is useful to print the entire state of the
-  ## robot.
-  print "============ Printing robot state"
-  print robot.get_current_state()
-  print "============"
- 
-  ## Let's setup the planner
-  #group.set_planning_time(0.0)
-  group.set_goal_orientation_tolerance(0.01)
-  group.set_goal_tolerance(0.01)
-  group.set_goal_joint_tolerance(0.01)
-  group.set_num_planning_attempts(100)
- 
-  ## Planning to a Pose goal
-  print "============ Generating plan 1"
- 
-  pose_goal = group.get_current_pose().pose
-  waypoints = []
- 
-  #pose_goal.orientation = geometry_msgs.msg.Quaternion(*tf_conversions.transformations.quaternion_from_euler(0.,  0.  , 0.))
-  waypoints.append(pose_goal)
-  pose_goal.position.x =0.40
-  pose_goal.position.y =-0.10
-  pose_goal.position.z =1.55
-  print pose_goal
- 
-  #Create waypoints
-  waypoints.append(pose_goal)
- 
-  #createcartesian  plan
-  (plan1, fraction) = group.compute_cartesian_path(
-                                      waypoints,   # waypoints to follow
-                                      0.01,        # eef_step
-                                      0.0)         # jump_threshold
-  #plan1 = group.retime_trajectory(robot.get_current_state(), plan1, 1.0)
- 
- 
-  print "============ Waiting while RVIZ displays plan1..."
-  rospy.sleep(0.5)
- 
- 
-  # ## You can ask RVIZ to visualize a plan (aka trajectory) for you.
-  # print "============ Visualizing plan1"
-  # display_trajectory = moveit_msgs.msg.DisplayTrajectory()
-  # display_trajectory.trajectory_start = robot.get_current_state()
-  # display_trajectory.trajectory.append(plan1)
-  # display_trajectory_publisher.publish(display_trajectory);
-  # print "============ Waiting while plan1 is visualized (again)..."
-  # rospy.sleep(2.)
- 
-  #If we're coming from another script we might want to remove the objects
-  if "table" in scene.get_known_object_names():
-    scene.remove_world_object("table")
-  if "table2" in scene.get_known_object_names():
-    scene.remove_world_object("table2")
-  if "groundplane" in scene.get_known_object_names():
-    scene.remove_world_object("groundplane")
- 
-  ## Moving to a pose goal
-  group.execute(plan1,wait=True)
-  rospy.sleep(4.)
-  ## second movement
-  pose_goal2 = group.get_current_pose().pose
-  waypoints2 = []
-  #pose_goal.orientation = geometry_msgs.msg.Quaternion(*tf_conversions.transformations.quaternion_from_euler(0.,  0.  , 0.))
-  waypoints.append(pose_goal)
-  pose_goal2.position.x =0.40
-  pose_goal2.position.y =-0.10
-  pose_goal2.position.z =1.2
-  print pose_goal2
- 
-  #Create waypoints
-  waypoints2.append(copy.deepcopy(pose_goal2))
- 
-  #createcartesian  plan
-  (plan2, fraction) = group.compute_cartesian_path(
-                                      waypoints2,   # waypoints to follow
-                                      0.01,        # eef_step
-                                      0.0)         # jump_threshold
-  #plan1 = group.retime_trajectory(robot.get_current_state(), plan1, 1.0)
-  rospy.sleep(2.)
- 
- # ## You can ask RVIZ to visualize a plan (aka trajectory) for you.
- #  display_trajectory = moveit_msgs.msg.DisplayTrajectory()
- #  display_trajectory.trajectory_start = robot.get_current_state()
- #  display_trajectory.trajectory.append(plan2)
- #  display_trajectory_publisher.publish(display_trajectory);
- 
- #  rospy.sleep(2)
- 
-  group.execute(plan2,wait=True)
-  rospy.sleep(2.)
- 
-  ## When finished shut down moveit_commander.
-  moveit_commander.roscpp_shutdown()
- 
-  ## END_TUTORIAL
-  print "============ STOPPING"
-  R = rospy.Rate(10)
-  while not rospy.is_shutdown():
-    R.sleep()
 
 #--------------------------------------------
 #--------------------------------------------
@@ -429,8 +508,8 @@ if __name__=='__main__':
 
   ## Let's setup the planner
   #group.set_planning_time(0.0)
-  group.set_goal_orientation_tolerance(0.01)
-  group.set_goal_tolerance(0.01)
+  group.set_goal_orientation_tolerance(0.02)
+  group.set_goal_tolerance(0.02)
   group.set_goal_joint_tolerance(0.01)
   group.set_num_planning_attempts(100)
 
@@ -440,18 +519,52 @@ if __name__=='__main__':
 
   try:
     
+    import_bucket_to_RVIZ()
+    import_all_cubes_to_RVIZ()
+
+    init_pose_joint()
     
-    init_pose()
     for cube_number in range (0,6):
+    #cube_number = 0
       cube_location = get_cube_location(cube_number)
-      
+      if not cube_location:
+        print('\n')
+        print('There is no cube{}'.format(cube_number))
+        print('\n')
+        continue
       cube_pose(cube_location,cube_number)
       go_down()
       close_gripper()
-      
-      go_up()
-      bucket_pose()
+      #go_up_joint()
+      init_pose_joint()
+      bucket_pose_joint()
       open_gripper()
+      init_pose_joint()
+      # Check if cube was placed in bucket:
+      cube_location = get_cube_location(cube_number)
+      if cube_location[1] < -0.15:
+        print('\n')
+        print('!!!Cube sucessfully disposed!!!')
+        print('\n')
+      else:
+        cube_pose(cube_location,cube_number)
+        cube_pose_exact(cube_location,cube_number)
+        close_gripper()
+        #go_up_joint()
+        init_pose_joint()
+        bucket_pose_joint()
+        open_gripper()
+        # Check if cube was placed in bucket:
+        cube_location = get_cube_location(cube_number)
+        if cube_location[1] < -0.2:
+          print('\n')
+          print('!!!Cube sucessfully disposed!!!')
+          print('\n')
+        else:
+          print('\n')
+          print('!!!Cube cannot be disposed, go to next cube!!!')
+          print('\n')
+
 
     end_programm()
    

@@ -22,9 +22,14 @@ if __name__ == '__main__':
 
     num_of_cubes = random.randint(2,6)
 
+    for num in range(0,6):
+    	# delete the cubes from last time
+    	print("Deleting previous cube{}".format(num))
+    	delete_model("cube{}".format(num))
+
     for num in xrange(0,num_of_cubes):
-        bin_y   =   random.uniform(0,0.5)
-        bin_x   =   random.uniform(0,0.5)
+        bin_y   =   random.uniform(-0.05,0.4) 	# changed max from 0,0.5
+        bin_x   =   random.uniform(0.0,0.5)	# changed max from 0,0.5
         item_name   =   "cube{}".format(num)
         print("Spawning model:%s", item_name)
         item_pose   =   Pose(Point(x=bin_x, y=bin_y,    z=1),   orient)

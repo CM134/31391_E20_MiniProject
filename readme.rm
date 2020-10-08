@@ -2,7 +2,7 @@ This is a repository for the DTU course 31391 Software Frameworks from Autonomou
 
 The launch procedure is as follows:
 
-roslaunch jaco_on_table jaco_on_table_gazebo_controlled.launchload_grasp_f ix:=true
+roslaunch jaco_on_table jaco_on_table_gazebo_controlled.launch load_grasp_fix:=true
 roslaunch jaco_on_table_moveit jaco_on_table_moveit.launch
 roslaunch jaco_on_table_moveit jaco_on_table_rviz.launch
 
@@ -10,3 +10,15 @@ Then launch the files:
 rosrun hello_ros cube_spawn.py
 rosrun hello_ros Gazebo_cube_project.py
 
+In Gazebo are tolerances changed because of error log:
+[ERROR] [1602182007.836513411, 2545.721000000]: atTrajectoryStart:: not at start angles, using tolerance 0.015000
+[ERROR] [1602182007.836582742, 2545.721000000]: 0 Curr: 2.311584 , Targ: 2.311585
+[ERROR] [1602182007.836643861, 2545.721000000]: 1 Curr: -1.954494 , Targ: -1.970730
+[ERROR] [1602182007.836690827, 2545.721000000]: 2 Curr: 2.796617 , Targ: 2.794731
+[ERROR] [1602182007.836734071, 2545.721000000]: 3 Curr: 2.841823 , Targ: 2.840442
+[ERROR] [1602182007.836757499, 2545.721000000]: 4 Curr: -2.110133 , Targ: -2.110125
+[ERROR] [1602182007.836778372, 2545.721000000]: 5 Curr: 2.003738 , Targ: 2.003740
+[ERROR] [1602182007.836803654, 2545.721000000]: 6 Curr: 0.005494 , Targ: 0.005494
+[ERROR] [1602182007.836846193, 2545.721000000]: 7 Curr: 0.005091 , Targ: 0.005091
+[ERROR] [1602182007.836881506, 2545.721000000]: 8 Curr: 0.005497 , Targ: 0.005497
+[ERROR] [1602182007.836913695, 2545.721000000]: Can only accept trajectoryies that start at the current state of the robot
