@@ -1,1 +1,12 @@
 This is a repository for the DTU course 31391 Software Frameworks from Autonomous Systems
+
+The launch procedure is as follows:
+
+roslaunch jaco_on_table jaco_on_table_gazebo_controlled.launchload_grasp_f ix:=true
+roslaunch jaco_on_table_moveit jaco_on_table_moveit.launch
+roslaunch jaco_on_table_moveit jaco_on_table_rviz.launch
+
+Then launch the files:
+rosrun hello_ros cube_spawn.py
+rosrun hello_ros Gazebo_cube_project.py
+
